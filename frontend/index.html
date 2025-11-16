@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Technical Issue Tracker | Professional Management System</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- ADD THESE LINES AFTER <link> tags in <head> -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- Home Page -->
+    <div id="homePage" class="page active">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div class="logo-container">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+               <h1 class="college-name">Dnyansagar Institute OF Management & Reserch</h1>
+            <p class="college-tagline">Empowering Education Through Technology</p>
+            <div class="subtitle">Technical Issue Management System</div>
+            
+            <div class="login-options">
+                <div class="login-card" onclick="showLogin('admin')">
+                    <div class="card-icon admin-icon">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <h3>Admin Portal</h3>
+                    <p>Manage approvals & monitor issues</p>
+                </div>
+                
+                <div class="login-card" onclick="showLogin('teacher')">
+                    <div class="card-icon teacher-icon">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <h3>Teacher Portal</h3>
+                    <p>Report & track technical issues</p>
+                </div>
+                
+                <div class="login-card" onclick="showLogin('student')">
+                    <div class="card-icon student-icon">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <h3>Student Portal</h3>
+                    <p>Submit technical complaints</p>
+                </div>
+
+                 <!-- NEW: Technician Card -->
+    <div class="login-card" onclick="showLogin('technician')">
+        <div class="card-icon technician-icon">
+            <i class="fas fa-tools"></i>
+        </div>
+        <h3>Technician Portal</h3>
+        <p>Manage & resolve issues</p>
+    </div>
+</div>
+            </div>
+        </div>
+        
+        <div class="footer-info">
+            <p><i class="fas fa-phone"></i> +91 20 1234 5678 | <i class="fas fa-envelope"></i> support@technical-institute.edu</p>
+        </div>
+    </div>
+
+    <!-- Login Page -->
+    <div id="loginPage" class="page">
+        <div class="container">
+            <div class="login-box">
+                <button class="back-btn" onclick="showPage('homePage')">
+                    <i class="fas fa-arrow-left"></i> Back to Home
+                </button>
+                
+                <div class="login-header">
+                    <div class="login-icon" id="loginIcon"></div>
+                    <h2 id="loginTitle">Login</h2>
+                </div>
+                
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope"></i> Email Address</label>
+                        <input type="email" id="loginEmail" required placeholder="Enter your email">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-lock"></i> Password</label>
+                        <input type="password" id="loginPassword" required placeholder="Enter your password">
+                    </div>
+                    
+                    <div id="loginError" class="error-message"></div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                </form>
+                
+                <div class="login-footer" id="loginFooter">
+                    <button type="button" class="link-button" onclick="showPage('forgotPage')">Forgot Password?</button>
+                    <button type="button" class="link-button" onclick="showRegisterPage()" id="registerLink">Create New Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Page -->
+    <div id="registerPage" class="page">
+        <div class="container">
+            <div class="register-box">
+                <button class="back-btn" onclick="showPage('loginPage')">
+                    <i class="fas fa-arrow-left"></i> Back to Login
+                </button>
+                
+                <div class="register-header">
+                    <div class="register-icon" id="registerIcon"></div>
+                    <h2 id="registerTitle">Create Account</h2>
+                </div>
+                
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Full Name</label>
+                            <input type="text" id="regName" required placeholder="Enter your full name">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><i class="fas fa-phone"></i> Phone Number</label>
+                            <input type="tel" id="regPhone" required placeholder="10-digit mobile number" pattern="[0-9]{10}">
+                        </div>
+                    </div>
+                    
+                    <div id="studentFields" style="display:none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label><i class="fas fa-book"></i> Course</label>
+                                <select id="regCourse">
+                                    <option value="MCA">MCA (Master of Computer Applications)</option>
+                                    <option value="MBA">MBA (Master of Business Administration)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label><i class="fas fa-layer-group"></i> Division</label>
+                                <select id="regDivision">
+                                    <option value="A">Division A</option>
+                                    <option value="B">Division B</option>
+                                    <option value="C">Division C</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-envelope"></i> Email Address</label>
+                            <input type="email" id="regEmail" required placeholder="your.email@example.com">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><i class="fas fa-lock"></i> Password</label>
+                            <input type="password" id="regPassword" required placeholder="Create strong password" minlength="6">
+                        </div>
+                    </div>
+                    
+                    <div id="registerError" class="error-message"></div>
+                    <div id="registerSuccess" class="success-message"></div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Register Account
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Page -->
+    <div id="forgotPage" class="page">
+        <div class="container">
+            <div class="forgot-box">
+                <button class="back-btn" onclick="showPage('loginPage')">
+                    <i class="fas fa-arrow-left"></i> Back to Login
+                </button>
+                
+                <div class="forgot-header">
+                    <i class="fas fa-key"></i>
+                    <h2>Reset Password</h2>
+                    <p>Enter your email to receive OTP</p>
+                </div>
+                
+                <!-- Step 1: Enter Email -->
+                <form id="forgotEmailForm" onsubmit="sendOTP(event); return false;" style="display: block;">
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope"></i> Email Address</label>
+                        <input type="email" id="forgotEmail" required placeholder="Enter your registered email">
+                    </div>
+                    
+                    <div id="forgotError" class="error-message"></div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Send OTP
+                    </button>
+                </form>
+                
+                <!-- Step 2: Verify OTP -->
+                <form id="verifyOTPForm" onsubmit="verifyOTP(event); return false;" style="display: none;">
+                    <div class="otp-sent-message">
+                        <i class="fas fa-check-circle"></i>
+                        <p>OTP sent to <strong id="sentEmail"></strong></p>
+                        <p class="otp-display">Your OTP: <strong id="displayOTP"></strong></p>
+                        <p class="otp-note">(In production, OTP will be sent via email/SMS)</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-shield-alt"></i> Enter OTP</label>
+                        <input type="text" id="otpInput" required placeholder="Enter 6-digit OTP" maxlength="6" pattern="[0-9]{6}">
+                    </div>
+                    
+                    <div id="otpError" class="error-message"></div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check"></i> Verify OTP
+                    </button>
+                    
+                    <button type="button" class="btn btn-secondary" onclick="resendOTP()" style="margin-top: 10px;">
+                        <i class="fas fa-redo"></i> Resend OTP
+                    </button>
+                </form>
+                
+                <!-- Step 3: Reset Password -->
+                <form id="resetPasswordForm" onsubmit="resetPassword(event); return false;" style="display: none;">
+                    <div class="success-message show">
+                        <i class="fas fa-check-circle"></i> OTP Verified Successfully!
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-lock"></i> New Password</label>
+                        <input type="password" id="newPassword" required placeholder="Enter new password" minlength="6">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-lock"></i> Confirm Password</label>
+                        <input type="password" id="confirmPassword" required placeholder="Confirm new password" minlength="6">
+                    </div>
+                    
+                    <div id="resetError" class="error-message"></div>
+                    <div id="resetSuccess" class="success-message"></div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Reset Password
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard (Teacher/Student) -->
+    <div id="dashboardPage" class="page">
+        <nav class="dashboard-nav">
+            <div class="nav-brand">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Technical Institute</span>
+            </div>
+            <div class="nav-user">
+                <span id="userName"></span>
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </nav>
+        
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-profile">
+                <div class="profile-avatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h3 id="sidebarName"></h3>
+                <p id="sidebarEmail"></p>
+                <p id="sidebarInfo"></p>
+            </div>
+            
+            <div class="sidebar-menu">
+                <a href="#" onclick="showDashboardSection('overview')">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="#" onclick="showDashboardSection('reportIssue')">
+                    <i class="fas fa-exclamation-triangle"></i> Report Issue
+                </a>
+                <a href="#" onclick="showDashboardSection('myIssues')">
+                    <i class="fas fa-list"></i> My Issues
+                </a>
+                <a href="#" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+        
+        <div class="dashboard-content">
+            <!-- Overview Section -->
+            <div id="overviewSection" class="dashboard-section active">
+                <h1>Welcome to Your Dashboard</h1>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h3 id="totalIssues">0</h3>
+                        <p>Total Issues</p>
+                    </div>
+                    <div class="stat-card pending">
+                        <i class="fas fa-clock"></i>
+                        <h3 id="pendingIssues">0</h3>
+                        <p>Pending</p>
+                    </div>
+                    <div class="stat-card resolved">
+                        <i class="fas fa-check-circle"></i>
+                        <h3 id="resolvedIssues">0</h3>
+                        <p>Resolved</p>
+                    </div>
+                </div>
+                
+                <div class="info-card">
+                    <h3><i class="fas fa-info-circle"></i> Quick Guide</h3>
+                    <ul>
+                        <li>Click <strong>"Report Issue"</strong> to submit a new technical complaint</li>
+                        <li>View all your issues in <strong>"My Issues"</strong> section</li>
+                        <li>Track the status of your reported problems</li>
+                        <li>Get updates when issues are resolved</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Report Issue Section -->
+            <div id="reportIssueSection" class="dashboard-section">
+                <h1><i class="fas fa-exclamation-triangle"></i> Report Technical Issue</h1>
+                
+                <form id="issueForm" onsubmit="handleIssueSubmit(event); return false;" class="issue-form">
+                    <div class="form-group">
+                        <label><i class="fas fa-tools"></i> Issue Type</label>
+                        <div class="issue-type-grid">
+                            <label class="issue-type-card">
+                                <input type="radio" name="issueType" value="Computer Not Working" required>
+                                <div class="card-content">
+                                    <i class="fas fa-desktop"></i>
+                                    <span>Computer Not Working</span>
+                                </div>
+                            </label>
+                            
+                            <label class="issue-type-card">
+                                <input type="radio" name="issueType" value="WiFi Not Working" required>
+                                <div class="card-content">
+                                    <i class="fas fa-wifi"></i>
+                                    <span>WiFi Not Working</span>
+                                </div>
+                            </label>
+                            
+                            <label class="issue-type-card">
+                                <input type="radio" name="issueType" value="Digital Board Not Working" required>
+                                <div class="card-content">
+                                    <i class="fas fa-tv"></i>
+                                    <span>Digital Board Not Working</span>
+                                </div>
+                            </label>
+                            
+                            <label class="issue-type-card">
+                                <input type="radio" name="issueType" value="Other Technical Issue" required>
+                                <div class="card-content">
+                                    <i class="fas fa-cog"></i>
+                                    <span>Other Technical Issue</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-building"></i> Floor Number</label>
+                            <select id="issueFloor" required>
+                                <option value="">Select Floor</option>
+                                <option value="1">Floor 1</option>
+                                <option value="2">Floor 2</option>
+                                <option value="3" selected>Floor 3 (MCA/MBA)</option>
+                                <option value="4">Floor 4</option>
+                                <option value="5">Floor 5</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><i class="fas fa-door-open"></i> Class/Room Number</label>
+                            <input type="text" id="issueClass" required placeholder="e.g., 301, 302, Lab-1">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-comment-alt"></i> Issue Description</label>
+                        <textarea id="issueDescription" required rows="5" placeholder="Please describe the issue in detail..."></textarea>
+                    </div>
+                    
+                    <div id="issueSuccess" class="success-message"></div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Submit Issue
+                    </button>
+                </form>
+            </div>
+            
+            <!-- My Issues Section -->
+            <div id="myIssuesSection" class="dashboard-section">
+                <h1><i class="fas fa-list"></i> My Reported Issues</h1>
+                <div id="issuesList" class="issues-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminDashboardPage" class="page">
+        <nav class="dashboard-nav admin-nav">
+            <div class="nav-brand">
+                <i class="fas fa-shield-alt"></i>
+                <span>Admin Panel</span>
+            </div>
+            <div class="nav-user">
+                <span>Administrator</span>
+                <button class="btn btn-logout" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </nav>
+        
+        <div class="admin-content">
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="showAdminTab('pending', this); return false;">
+                    <i class="fas fa-user-clock"></i> Pending Approvals
+                </button>
+                <button class="tab-btn" onclick="showAdminTab('teachers', this); return false;">
+                    <i class="fas fa-chalkboard-teacher"></i> Teachers
+                </button>
+                <button class="tab-btn" onclick="showAdminTab('students', this); return false;">
+                    <i class="fas fa-user-graduate"></i> Students
+                </button>
+                <button class="tab-btn" onclick="showAdminTab('technicians', this); return false;">
+                    <i class="fas fa-tools"></i> Technicians
+                </button>
+                <button class="tab-btn" onclick="showAdminTab('issues', this); return false;">
+                    <i class="fas fa-exclamation-triangle"></i> All Issues
+                </button>
+                <button class="tab-btn" onclick="showAdminTab('feedback', this); return false;">
+                    <i class="fas fa-star"></i> Feedback
+                </button>
+                <button class="tab-btn" onclick="showAdminTab('analytics', this); return false;">
+                    <i class="fas fa-chart-line"></i> Analytics
+                </button>
+            </div>
+            
+            <div id="pendingTab" class="admin-tab-content active"></div>
+            <div id="teachersTab" class="admin-tab-content"></div>
+            <div id="studentsTab" class="admin-tab-content"></div>
+            <div id="techniciansTab" class="admin-tab-content"></div>
+            <div id="issuesTab" class="admin-tab-content"></div>
+            <div id="feedbackTab" class="admin-tab-content"></div>
+            <div id="analyticsTab" class="admin-tab-content"></div>
+        </div>
+    </div>
+
+
+
+
+
+    <!-- Technician Dashboard -->
+    
+<div id="analyticsTab" class="admin-tab-content">
+    <div class="analytics-container">
+        <div class="analytics-header">
+            <h2><i class="fas fa-chart-line"></i> Analytics Dashboard</h2>
+            <div class="date-filter">
+                <select id="analyticsTimeRange" onchange="loadAnalytics()">
+                    <option value="7">Last 7 Days</option>
+                    <option value="30" selected>Last 30 Days</option>
+                    <option value="90">Last 90 Days</option>
+                    <option value="365">Last Year</option>
+                    <option value="all">All Time</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div id="analyticsSummary" class="analytics-grid"></div>
+        
+        <!-- Charts Row 1 -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <h3><i class="fas fa-chart-pie"></i> Issues by Type</h3>
+                <canvas id="issueTypeChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3><i class="fas fa-chart-bar"></i> Issues by Status</h3>
+                <canvas id="issueStatusChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Charts Row 2 -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <h3><i class="fas fa-building"></i> Issues by Floor</h3>
+                <canvas id="issueFloorChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3><i class="fas fa-chart-line"></i> Monthly Trend</h3>
+                <canvas id="monthlyTrendChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Charts Row 3 -->
+        <div class="charts-row">
+            <div class="chart-card full-width">
+                <h3><i class="fas fa-clock"></i> Resolution Time Analysis</h3>
+                <canvas id="resolutionTimeChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Top Performers -->
+        <div class="chart-card">
+            <h3><i class="fas fa-trophy"></i> Top Performing Technicians</h3>
+            <div id="topTechniciansTable"></div>
+        </div>
+        
+        <!-- User Activity -->
+        <div class="chart-card">
+            <h3><i class="fas fa-users"></i> Most Active Users</h3>
+            <div id="activeUsersTable"></div>
+        </div>
+        
+        <!-- Export Options -->
+        <div class="export-section">
+            <h3><i class="fas fa-download"></i> Export Reports</h3>
+            <div class="export-buttons">
+                <button class="btn-export btn-pdf" onclick="exportAnalyticsPDF()">
+                    <i class="fas fa-file-pdf"></i> Export PDF Report
+                </button>
+                <button class="btn-export btn-excel" onclick="exportAnalyticsExcel()">
+                    <i class="fas fa-file-excel"></i> Export Excel
+                </button>
+                <button class="btn-export btn-csv" onclick="exportAnalyticsCSV()">
+                    <i class="fas fa-file-csv"></i> Export CSV
+                </button>
+                <button class="btn-export btn-print" onclick="printAnalytics()">
+                    <i class="fas fa-print"></i> Print Report
+                </button>
+            </div>
+        </div>
+        
+        <!-- Insights Section -->
+        <div id="analyticsInsights" class="insights-section"></div>
+    </div>
+</div>
+        
+        <!-- Notification Dropdown -->
+        <div id="notificationDropdown" class="notification-dropdown">
+            <div class="notification-header">
+                <h3>Notifications</h3>
+                <button onclick="clearAllNotifications()" class="clear-btn">Clear All</button>
+            </div>
+            <div id="notificationList" class="notification-list"></div>
+        </div>
+        
+        <div class="technician-content">
+            <div class="tech-stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-tasks"></i>
+                    <h3 id="techTotalTasks">0</h3>
+                    <p>Total Tasks</p>
+                </div>
+                <div class="stat-card pending">
+                    <i class="fas fa-clock"></i>
+                    <h3 id="techPendingTasks">0</h3>
+                    <p>Pending Tasks</p>
+                </div>
+                <div class="stat-card resolved">
+                    <i class="fas fa-check-circle"></i>
+                    <h3 id="techCompletedTasks">0</h3>
+                    <p>Completed Tasks</p>
+                </div>
+                <div class="stat-card rating">
+                    <i class="fas fa-star"></i>
+                    <h3 id="techRating">0.0</h3>
+                    <p>Average Rating</p>
+                </div>
+            </div>
+            
+            <div class="task-container">
+                <h2><i class="fas fa-clipboard-list"></i> My Tasks</h2>
+                <div class="task-filters">
+                    <button class="filter-btn active" onclick="filterTasks('all')">All</button>
+                    <button class="filter-btn" onclick="filterTasks('assigned')">Assigned</button>
+                    <button class="filter-btn" onclick="filterTasks('resolved')">Completed</button>
+                </div>
+                <div id="techTaskList" class="task-list"></div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- ========== ADD TO index.html ========== -->
+
+<!-- 1. Add Feedback tab button in Admin tabs (around line 820) -->
+<button class="tab-btn" onclick="showAdminTab('feedbackReport', this); return false;">
+    <i class="fas fa-star"></i> Feedback Report
+</button>
+
+<!-- 2. Add Feedback tab content (after analyticsTab div) -->
+<div id="feedbackReportTab" class="admin-tab-content"></div>
+
+<!-- ========== ADD TO style.css ========== -->
+
+<style>
+/* ========== FEEDBACK PROMPT BANNER ========== */
+
+.feedback-prompt-banner {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: var(--white);
+    padding: 1rem 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s;
+}
+
+.feedback-prompt-banner.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.banner-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.banner-content i.fa-star {
+    font-size: 2rem;
+    animation: pulse-star 2s infinite;
+}
+
+@keyframes pulse-star {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+.banner-content span {
+    flex: 1;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.btn-feedback {
+    background: var(--white);
+    color: #d97706;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-feedback:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-close-banner {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: var(--white);
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.btn-close-banner:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ========== FEEDBACK MODAL ========== */
+
+.feedback-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+    padding: 2rem;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.feedback-modal.show {
+    opacity: 1;
+}
+
+.feedback-modal-content {
+    background: var(--white);
+    border-radius: 20px;
+    max-width: 700px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    animation: slideUp 0.4s ease-out;
+}
+
+.feedback-modal-header {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: var(--white);
+    padding: 2rem;
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.feedback-modal-header h2 {
+    margin: 0;
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.feedback-modal-body {
+    padding: 2rem;
+}
+
+.feedback-intro {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    font-size: 1.05rem;
+}
+
+.feedback-issues-list {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.feedback-issue-card {
+    background: #f9fafb;
+    padding: 1.5rem;
+    border-radius: 15px;
+    border-left: 4px solid #f59e0b;
+    transition: all 0.3s;
+}
+
+.issue-info {
+    margin-bottom: 1.5rem;
+}
+
+.issue-type {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.issue-meta, .issue-date {
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin: 0.25rem 0;
+}
+
+.rating-section {
+    margin-bottom: 1.5rem;
+}
+
+.rating-section label {
+    display: block;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.75rem;
+}
+
+.star-rating {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 2.5rem;
+    direction: rtl;
+    margin-bottom: 0.5rem;
+}
+
+.star-rating i {
+    color: #d1d5db;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.star-rating i:hover,
+.star-rating i.active {
+    color: #fbbf24;
+    transform: scale(1.2);
+}
+
+.rating-text {
+    display: block;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+}
+
+.comment-section {
+    margin-bottom: 1.5rem;
+}
+
+.comment-section label {
+    display: block;
+    font-weight: 500;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.comment-section textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    resize: vertical;
+    transition: all 0.3s;
+}
+
+.comment-section textarea:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.btn-submit-feedback {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.05rem;
+    transition: all 0.3s;
+}
+
+.btn-submit-feedback:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ========== FEEDBACK REPORT STYLES ========== */
+
+.feedback-report-container {
+    padding: 2rem;
+}
+
+.feedback-report-container h2 {
+    color: var(--dark);
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.feedback-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.feedback-stats-grid .stat-card {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow);
+    text-align: center;
+    border-left: 4px solid var(--primary-color);
+}
+
+.stat-card.rating {
+    border-left-color: #f59e0b;
+}
+
+.stat-card.rating i {
+    color: #f59e0b;
+}
+
+.stat-card.excellent {
+    border-left-color: #10b981;
+}
+
+.stat-card.excellent i {
+    color: #10b981;
+}
+
+.stat-card.good {
+    border-left-color: #3b82f6;
+}
+
+.stat-card.good i {
+    color: #3b82f6;
+}
+
+.report-section {
+    background: var(--white);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+.report-section h3 {
+    color: var(--dark);
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.rating-distribution {
+    display: grid;
+    gap: 1rem;
+}
+
+.rating-bar-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 150px;
+    gap: 1rem;
+    align-items: center;
+}
+
+.rating-label {
+    font-size: 1.2rem;
+}
+
+.rating-bar-container {
+    background: #e5e7eb;
+    height: 30px;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.rating-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+    border-radius: 15px;
+    transition: width 0.5s ease-out;
+}
+
+.rating-count {
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.technician-rankings {
+    display: grid;
+    gap: 1rem;
+}
+
+.ranking-card {
+    background: #f9fafb;
+    padding: 1.5rem;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    transition: all 0.3s;
+}
+
+.ranking-card:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.rank {
+    font-size: 2rem;
+    font-weight: bold;
+    min-width: 60px;
+    text-align: center;
+}
+
+.tech-info {
+    flex: 1;
+}
+
+.tech-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.25rem;
+}
+
+.tech-feedback {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.tech-rating {
+    text-align: right;
+}
+
+.tech-rating .stars {
+    font-size: 1.3rem;
+    margin-bottom: 0.25rem;
+}
+
+.tech-rating .rating-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #f59e0b;
+}
+
+.recent-feedback-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.feedback-card {
+    background: #f9fafb;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border-left: 4px solid #3b82f6;
+}
+
+.feedback-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.feedback-user {
+    font-weight: 600;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.feedback-rating {
+    font-size: 1.2rem;
+}
+
+.feedback-issue {
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+}
+
+.feedback-comment {
+    background: var(--white);
+    padding: 1rem;
+    border-radius: 8px;
+    font-style: italic;
+    color: #4b5563;
+    margin-bottom: 0.75rem;
+}
+
+.feedback-meta {
+    display: flex;
+    gap: 1.5rem;
+    color: #9ca3af;
+    font-size: 0.85rem;
+}
+
+.feedback-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+    .feedback-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .rating-bar-row {
+        grid-template-columns: 80px 1fr 100px;
+        gap: 0.5rem;
+    }
+    
+    .ranking-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .tech-rating {
+        text-align: center;
+    }
+    
+    .feedback-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .feedback-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .feedback-modal-content {
+        margin: 1rem;
+    }
+    
+    .feedback-modal-body {
+        padding: 1.5rem;
+    }
+    
+    .star-rating {
+        font-size: 2rem;
+    }
+    
+    .feedback-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+    <script src="script.js"></script>
+</body>
+</html>
