@@ -161,8 +161,8 @@ body {
 
 .footer-info {
     position: absolute;
-    bottom: 0rem;
-    left: 0;
+    bottom: -26rem;
+    left: 2rem;
     right: 0;
     text-align: center;
     color: var(--white);

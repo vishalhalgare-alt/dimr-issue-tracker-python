@@ -1,9 +1,12 @@
-// API Base URL - CHANGE localhost TO YOUR IP ADDRESS
-const API_URL = 'http://10.200.67.160:5000/api';
+// API Base URL - use local backend by default
+const API_URL = 'http://127.0.0.1:5000/api';
 
 
 let currentUser = null;
 let currentUserType = null;
+let currentToken = null;
+let currentAssignIssueId = null;
+let technicianTasksStore = { assigned: [], recommended: [], filter: 'all' };
 
 // ========== PAGE NAVIGATION ==========
 
@@ -80,14 +83,17 @@ async function handleLogin(event) {
         if (data.success) {
             if (currentUserType === 'admin') {
                 currentUser = { type: 'admin', email };
+                currentToken = data.token;
                 showPage('adminDashboardPage');
                 loadAdminData();
             } else if (currentUserType === 'technician') {
                 currentUser = { ...data.user, type: 'technician' };
+                currentToken = data.token;
                 showPage('technicianDashboardPage');
                 loadTechnicianDashboard();
             } else {
                 currentUser = { ...data.user, type: currentUserType };
+                currentToken = data.token;
                 showPage('dashboardPage');
                 updateUserDashboard();
                 loadUserIssues();
@@ -399,7 +405,11 @@ async function showAdminTab(tab, buttonElement) {
 
 async function loadPendingTeachers() {
     try {
-        const response = await fetch(API_URL + '/admin/pending-teachers');
+        const response = await fetch(API_URL + '/admin/pending-teachers', {
+            headers: {
+                'Authorization': `Bearer ${currentToken}`
+            }
+        });
         const teachers = await response.json();
         
         const container = document.getElementById('pendingTab');
@@ -437,7 +447,10 @@ async function approveTeacher(teacherId) {
     if (confirm('Approve this teacher?')) {
         try {
             const response = await fetch(`${API_URL}/admin/approve-teacher/${teacherId}`, {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${currentToken}`
+                }
             });
             const data = await response.json();
             
@@ -456,7 +469,10 @@ async function rejectTeacher(teacherId) {
     if (confirm('Are you sure you want to reject this teacher?')) {
         try {
             const response = await fetch(`${API_URL}/admin/reject-teacher/${teacherId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${currentToken}`
+                }
             });
             const data = await response.json();
             
@@ -473,7 +489,11 @@ async function rejectTeacher(teacherId) {
 
 async function loadAllTeachers() {
     try {
-        const response = await fetch(API_URL + '/admin/teachers');
+        const response = await fetch(API_URL + '/admin/teachers', {
+            headers: {
+                'Authorization': `Bearer ${currentToken}`
+            }
+        });
         const teachers = await response.json();
         
         const container = document.getElementById('teachersTab');
@@ -506,7 +526,11 @@ async function loadAllTeachers() {
 
 async function loadAllStudents() {
     try {
-        const response = await fetch(API_URL + '/admin/students');
+        const response = await fetch(API_URL + '/admin/students', {
+            headers: {
+                'Authorization': `Bearer ${currentToken}`
+            }
+        });
         const students = await response.json();
         
         const container = document.getElementById('studentsTab');
@@ -541,7 +565,11 @@ async function loadAllStudents() {
 
 async function loadAllTechnicians() {
     try {
-        const response = await fetch(API_URL + '/admin/technicians');
+        const response = await fetch(API_URL + '/admin/technicians', {
+            headers: {
+                'Authorization': `Bearer ${currentToken}`
+            }
+        });
         const technicians = await response.json();
         
         const container = document.getElementById('techniciansTab');
@@ -577,10 +605,119 @@ async function loadAllTechnicians() {
 async function loadAllIssues() {
     const container = document.getElementById('issuesTab');
     container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading issues...</div>';
-    
-    // This function will be completed when you add the backend API for all issues
-    // For now, showing a placeholder
-    container.innerHTML = '<div class="data-table"><div class="table-header"><i class="fas fa-exclamation-triangle"></i> All Issues</div><div class="empty-state"><i class="fas fa-info-circle"></i><p>Issue management coming soon...</p></div></div>';
+    try {
+        const resp = await fetch(API_URL + '/admin/issues', {
+            headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        const data = await resp.json();
+        if (!data.success) {
+            container.innerHTML = '<div class="empty-state"><p>Error loading issues</p></div>';
+            return;
+        }
+        const issues = data.issues || [];
+        if (issues.length === 0) {
+            container.innerHTML = '<div class="data-table"><div class="table-header"><i class="fas fa-exclamation-triangle"></i> All Issues</div><div class="empty-state"><i class="fas fa-inbox"></i><p>No issues reported yet</p></div></div>';
+            return;
+        }
+
+        let html = '<div class="data-table"><div class="table-header"><i class="fas fa-exclamation-triangle"></i> All Issues (' + issues.length + ')</div>';
+        html += '<div class="professional-table"><table><thead><tr>';
+        html += '<th>#</th><th>Reporter</th><th>Type</th><th>Location</th><th>Description</th><th>Status</th><th>Assigned To</th><th>Created</th><th>Actions</th>';
+        html += '</tr></thead><tbody>';
+
+        issues.forEach((issue, idx) => {
+            const assigned = issue.technician_name ? issue.technician_name + ' (' + (issue.technician_specialization||'') + ')' : 'Unassigned';
+            html += '<tr>';
+            html += '<td>' + (idx + 1) + '</td>';
+            html += '<td>' + (issue.user_name || '') + '<br/><small>' + issue.user_email + ' (' + issue.user_type + ')</small></td>';
+            html += '<td>' + issue.issue_type + '</td>';
+            html += '<td>Floor ' + issue.floor + ' | ' + issue.class_number + '</td>';
+            html += '<td>' + (issue.description ? (issue.description.length > 80 ? issue.description.substring(0,80) + '...' : issue.description) : '') + '</td>';
+            html += '<td>' + (issue.status || '') + '</td>';
+            html += '<td>' + assigned + '</td>';
+            html += '<td>' + new Date(issue.created_at).toLocaleDateString() + '</td>';
+            html += '<td>';
+            html += '<button class="btn-action" onclick="openAssignModal(' + issue.id + ')"><i class="fas fa-user-plus"></i> Assign</button>';
+            html += '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div></div>';
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('Load all issues error:', error);
+        container.innerHTML = '<div class="empty-state"><p>Connection error while loading issues</p></div>';
+    }
+}
+
+// ========== ASSIGN MODAL HANDLERS ==========
+function openAssignModal(issueId) {
+    currentAssignIssueId = issueId;
+    // Show modal
+    const modal = document.getElementById('assignModal');
+    const info = document.getElementById('assignIssueInfo');
+    info.textContent = 'Loading technicians...';
+    modal.style.display = 'flex';
+
+    // Fetch technicians list
+    fetch(API_URL + '/admin/technicians', { headers: { 'Authorization': `Bearer ${currentToken}` } })
+        .then(r => r.json())
+        .then(list => {
+            const select = document.getElementById('assignTechSelect');
+            select.innerHTML = '';
+            if (!Array.isArray(list) || list.length === 0) {
+                info.textContent = 'No technicians available to assign.';
+                return;
+            }
+            info.textContent = '';
+            list.forEach(tech => {
+                const opt = document.createElement('option');
+                opt.value = tech.id;
+                opt.textContent = tech.name + ' — ' + tech.specialization + ' (' + tech.email + ')';
+                select.appendChild(opt);
+            });
+        })
+        .catch(err => {
+            console.error('Load technicians error:', err);
+            document.getElementById('assignIssueInfo').textContent = 'Error loading technicians';
+        });
+
+    // wire confirm button
+    const confirmBtn = document.getElementById('confirmAssignBtn');
+    confirmBtn.onclick = () => assignIssue(currentAssignIssueId);
+}
+
+function closeAssignModal() {
+    const modal = document.getElementById('assignModal');
+    modal.style.display = 'none';
+    currentAssignIssueId = null;
+}
+
+async function assignIssue(issueId) {
+    const select = document.getElementById('assignTechSelect');
+    const techId = select.value;
+    if (!techId) {
+        alert('Please choose a technician');
+        return;
+    }
+    try {
+        const resp = await fetch(API_URL + '/admin/assign-issue/' + issueId, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ technician_id: parseInt(techId, 10) })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            alert('Issue assigned successfully');
+            closeAssignModal();
+            await loadAllIssues();
+        } else {
+            alert('Assignment failed: ' + (data.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Assign issue error:', error);
+        alert('Connection error while assigning');
+    }
 }
 
 // ========== FEEDBACK ==========
@@ -656,17 +793,178 @@ async function loadAnalytics() {
 
 async function loadTechnicianDashboard() {
     document.getElementById('techName').textContent = currentUser.name;
-    document.getElementById('techEmail').textContent = currentUser.email;
-    document.getElementById('techSpecialization').textContent = currentUser.specialization;
-    
+    document.getElementById('techEmail').textContent = currentUser.email || '';
+    document.getElementById('techSpecialization').textContent = currentUser.specialization || '';
+
     // Load technician tasks
     await loadTechnicianTasks();
+    // Load notifications for technician
+    await loadTechnicianNotifications();
+}
+
+async function loadTechnicianNotifications() {
+    if (!currentUser || !currentUser.email) return;
+    try {
+        const resp = await fetch(API_URL + '/notifications/' + encodeURIComponent(currentUser.email));
+        const data = await resp.json();
+        const listEl = document.getElementById('notifList');
+        const noEl = document.getElementById('noNotif');
+        const badge = document.getElementById('notifCount');
+        listEl.innerHTML = '';
+        if (!data.success || !Array.isArray(data.notifications) || data.notifications.length === 0) {
+            noEl.style.display = 'block';
+            badge.style.display = 'none';
+            return;
+        }
+        noEl.style.display = 'none';
+        const notifs = data.notifications;
+        let unread = 0;
+        notifs.forEach(n => {
+            if (n.is_read === 0) unread++;
+            const card = document.createElement('div');
+            card.className = 'notification-card';
+            card.style = 'background:#f9fafb;padding:0.8rem;border-radius:8px;border-left:4px solid #2563eb;' + (n.is_read === 0 ? 'font-weight:600;' : '');
+            card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:start"><div><strong>${n.title}</strong><div style="font-size:0.9rem;color:#6b7280;margin-top:0.25rem">${n.message}</div><div style="font-size:0.8rem;color:#9ca3af;margin-top:0.5rem">${new Date(n.created_at).toLocaleString()}</div></div></div>`;
+            
+            // Mark as read when user views it
+            if (n.is_read === 0) {
+                fetch(API_URL + '/notifications/' + n.id + '/mark-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                }).catch(err => console.error('Mark read error:', err));
+            }
+            
+            listEl.appendChild(card);
+        });
+        if (unread > 0) {
+            badge.style.display = 'inline-block';
+            badge.textContent = unread;
+        } else {
+            badge.style.display = 'none';
+        }
+    } catch (err) {
+        console.error('Load notifications error:', err);
+    }
+}
+
+function openNotifModal() {
+    document.getElementById('notifModal').style.display = 'flex';
+}
+
+function closeNotifModal() {
+    document.getElementById('notifModal').style.display = 'none';
 }
 
 async function loadTechnicianTasks() {
-    // This will be completed when you add technician tasks API
     const container = document.getElementById('techTaskList');
-    container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No tasks assigned yet</p></div>';
+    container.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Loading tasks...</div>';
+    try {
+        const resp = await fetch(API_URL + '/technician/tasks', {
+            headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        const data = await resp.json();
+        if (!data.success) {
+            container.innerHTML = '<div class="empty-state"><p>Error loading tasks</p></div>';
+            return;
+        }
+
+        technicianTasksStore.assigned = data.assigned || [];
+        technicianTasksStore.recommended = data.recommended || [];
+        technicianTasksStore.filter = 'all';
+
+        renderTechnicianTasks();
+    } catch (error) {
+        console.error('Load technician tasks error:', error);
+        container.innerHTML = '<div class="empty-state"><p>Connection error while loading tasks</p></div>';
+    }
+}
+
+function renderTechnicianTasks() {
+    const container = document.getElementById('techTaskList');
+    const { assigned, recommended, filter } = technicianTasksStore;
+
+    const completedStatuses = ['resolved', 'completed', 'closed', 'done'];
+
+    // Update technician counters
+    const totalTasks = (assigned ? assigned.length : 0) + (recommended ? recommended.length : 0);
+    const completedTasks = (assigned ? assigned.filter(i => completedStatuses.includes((i.status || '').toLowerCase())).length : 0);
+    const pendingTasks = Math.max(0, totalTasks - completedTasks);
+    const totalEl = document.getElementById('techTotalTasks');
+    const pendingEl = document.getElementById('techPendingTasks');
+    const completedEl = document.getElementById('techCompletedTasks');
+    if (totalEl) totalEl.textContent = totalTasks;
+    if (pendingEl) pendingEl.textContent = pendingTasks;
+    if (completedEl) completedEl.textContent = completedTasks;
+
+    // combine based on filter
+    let items = [];
+    if (filter === 'all') {
+        // show assigned first then recommended
+        items = (assigned || []).concat((recommended || []).map(r => ({ ...r, recommended: true })));
+    } else if (filter === 'assigned') {
+        items = assigned || [];
+    } else if (filter === 'resolved') {
+        items = (assigned || []).filter(i => completedStatuses.includes((i.status || '').toLowerCase()));
+    }
+
+    if (!items || items.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No tasks found</p></div>';
+        return;
+    }
+
+    let html = '';
+    items.forEach(issue => {
+        const statusLower = (issue.status || '').toLowerCase();
+        html += '<div class="issue-item ' + (issue.status || '') + '">';
+        html += '<div class="issue-header">';
+        html += '<div class="issue-title"><i class="fas fa-exclamation-circle"></i> ' + issue.issue_type + '</div>';
+        html += '<span class="issue-status ' + (issue.status || '') + '">' + (issue.status ? issue.status.toUpperCase() : 'NEW') + '</span>';
+        html += '</div>';
+        html += '<div class="issue-details">';
+        html += '<i class="fas fa-building"></i> Floor ' + issue.floor + ' <span style="margin:0 0.5rem">|</span> <i class="fas fa-door-open"></i> ' + issue.class_number;
+        html += '</div>';
+        html += '<div class="issue-details"><i class="fas fa-user"></i> ' + (issue.user_name || issue.user_email) + '</div>';
+        html += '<div class="issue-description">' + (issue.description || '') + '</div>';
+        if (issue.recommended) {
+            html += '<div class="issue-recommend"><small>Recommended (matching your specialization)</small></div>';
+        }
+        html += '<div style="margin-top:0.5rem;display:flex;gap:0.5rem;justify-content:flex-end">';
+        if (!completedStatuses.includes(statusLower)) {
+            html += '<button class="btn-action" onclick="markIssueResolved(' + issue.id + ')"><i class="fas fa-check"></i> Mark Resolved</button>';
+        }
+        html += '</div>';
+        html += '</div>';
+    });
+
+    container.innerHTML = html;
+}
+
+async function markIssueResolved(issueId) {
+    try {
+        const resp = await fetch(API_URL + '/issue/update-status/' + issueId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentToken}` },
+            body: JSON.stringify({ status: 'resolved' })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            await loadTechnicianTasks();
+        } else {
+            alert('Failed to mark resolved: ' + (data.message || 'Unknown'));
+        }
+    } catch (err) {
+        console.error('Mark resolved error:', err);
+        alert('Connection error');
+    }
+}
+
+function filterTasks(status) {
+    technicianTasksStore.filter = status;
+    // update button states if present
+    document.querySelectorAll('.task-filters .filter-btn').forEach(b => b.classList.remove('active'));
+    const btns = document.querySelectorAll('.task-filters .filter-btn');
+    btns.forEach(b => { if (b.getAttribute('onclick')?.includes("filterTasks('"+status+"')")) b.classList.add('active'); });
+    renderTechnicianTasks();
 }
 
 // ========== LOGOUT ==========
@@ -674,6 +972,7 @@ async function loadTechnicianTasks() {
 function logout() {
     currentUser = null;
     currentUserType = null;
+    currentToken = null;
     showPage('homePage');
 }
 
