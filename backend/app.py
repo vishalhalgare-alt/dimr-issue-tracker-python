@@ -101,6 +101,7 @@ def init_db():
         floor TEXT NOT NULL,
         class_number TEXT NOT NULL,
         description TEXT NOT NULL,
+        photo LONGTEXT,
         status TEXT DEFAULT 'pending',
         assigned_to INTEGER,
         priority TEXT DEFAULT 'normal',
@@ -352,6 +353,100 @@ def technician_login():
     return jsonify({'success': True, 'token': token, 'user': user})
 
 
+# --------------------------
+# Forgot Password - OTP endpoints
+# --------------------------
+import random
+import string
+
+# Store OTPs temporarily (in production, use Redis or database)
+otp_store = {}
+
+def generate_otp():
+    """Generate a 6-digit random OTP"""
+    return ''.join(random.choices(string.digits, k=6))
+
+def find_user_by_email(email, user_type):
+    """Find user in appropriate table by email"""
+    conn = get_db()
+    if user_type == 'teacher':
+        user = conn.execute('SELECT * FROM teachers WHERE email=?', (email,)).fetchone()
+    elif user_type == 'student':
+        user = conn.execute('SELECT * FROM students WHERE email=?', (email,)).fetchone()
+    elif user_type == 'technician':
+        user = conn.execute('SELECT * FROM technicians WHERE email=?', (email,)).fetchone()
+    else:
+        return None
+    return user
+
+@app.route('/api/forgot-password/send-otp', methods=['POST'])
+def send_otp():
+    data = request.get_json(silent=True) or {}
+    email = data.get('email')
+    user_type = data.get('userType')
+    
+    if not email or not user_type:
+        return jsonify({'success': False, 'message': 'Missing email or user type'}), 400
+    
+    # Check if user exists
+    user = find_user_by_email(email, user_type)
+    if not user:
+        return jsonify({'success': False, 'message': 'Email not found'}), 404
+    
+    # Generate OTP
+    otp = generate_otp()
+    
+    # Store OTP temporarily (expires after 10 minutes in production)
+    otp_store[email] = {
+        'otp': otp,
+        'user_type': user_type,
+        'timestamp': datetime.utcnow()
+    }
+    
+    # In production: send OTP via email
+    # For now: return OTP for testing (remove in production)
+    return jsonify({'success': True, 'message': 'OTP sent to email', 'otp': otp})
+
+@app.route('/api/forgot-password/reset', methods=['POST'])
+def reset_password():
+    data = request.get_json(silent=True) or {}
+    email = data.get('email')
+    new_password = data.get('newPassword')
+    user_type = data.get('userType')
+    
+    if not email or not new_password or not user_type:
+        return jsonify({'success': False, 'message': 'Missing required fields'}), 400
+    
+    # Validate password length
+    if len(new_password) < 6:
+        return jsonify({'success': False, 'message': 'Password must be at least 6 characters'}), 400
+    
+    # Find user
+    user = find_user_by_email(email, user_type)
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'}), 404
+    
+    # Hash new password
+    hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    # Update password in database
+    conn = get_db()
+    if user_type == 'teacher':
+        conn.execute('UPDATE teachers SET password=? WHERE email=?', (hashed_password, email))
+    elif user_type == 'student':
+        conn.execute('UPDATE students SET password=? WHERE email=?', (hashed_password, email))
+    elif user_type == 'technician':
+        conn.execute('UPDATE technicians SET password=? WHERE email=?', (hashed_password, email))
+    
+    conn.commit()
+    
+    # Clean up OTP from store
+    if email in otp_store:
+        del otp_store[email]
+    
+    return jsonify({'success': True, 'message': 'Password reset successfully'})
+
+
 def create_notification(user_email, user_type, title, message):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -375,13 +470,16 @@ def create_issue():
     floor = data.get('floor')
     class_number = data.get('classNumber')
     description = data.get('description')
+    photo = data.get('photo')  # Base64 encoded photo
+    
     if not all([user_name, user_type, user_email, issue_type, floor, class_number, description]):
         return jsonify({'success': False, 'message': 'Missing fields'}), 400
+    
     conn = get_db()
     conn.execute(
-        '''INSERT INTO issues (user_name, user_type, user_email, issue_type, floor, class_number, description)
-           VALUES (?, ?, ?, ?, ?, ?, ?)''',
-        (user_name, user_type, user_email, issue_type, floor, class_number, description)
+        '''INSERT INTO issues (user_name, user_type, user_email, issue_type, floor, class_number, description, photo)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        (user_name, user_type, user_email, issue_type, floor, class_number, description, photo)
     )
     conn.commit()
     return jsonify({'success': True, 'message': 'Issue created'})
@@ -392,6 +490,61 @@ def get_user_issues(email):
     rows = conn.execute('SELECT * FROM issues WHERE user_email=? ORDER BY created_at DESC', (email,)).fetchall()
     issues = [dict(row) for row in rows]
     return jsonify(issues)
+
+@app.route('/api/issue/update/<int:issue_id>', methods=['PUT'])
+@auth_required()
+def update_user_issue(issue_id):
+    data = request.get_json(silent=True) or {}
+    
+    # Check if user owns this issue
+    conn = get_db()
+    issue = conn.execute('SELECT * FROM issues WHERE id=?', (issue_id,)).fetchone()
+    if not issue:
+        return jsonify({'success': False, 'message': 'Issue not found'}), 404
+    
+    if issue['user_email'] != request.user['email']:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    # Only allow updates if issue is still pending
+    if issue['status'] != 'pending':
+        return jsonify({'success': False, 'message': 'Cannot edit issue that is already assigned or resolved'}), 400
+    
+    # Update allowed fields
+    issue_type = data.get('issue_type', issue['issue_type'])
+    floor = data.get('floor', issue['floor'])
+    class_number = data.get('class_number', issue['class_number'])
+    description = data.get('description', issue['description'])
+    photo = data.get('photo', issue['photo'])
+    
+    conn.execute('''
+        UPDATE issues 
+        SET issue_type=?, floor=?, class_number=?, description=?, photo=?
+        WHERE id=?
+    ''', (issue_type, floor, class_number, description, photo, issue_id))
+    conn.commit()
+    
+    return jsonify({'success': True, 'message': 'Issue updated successfully'})
+
+@app.route('/api/issue/delete/<int:issue_id>', methods=['DELETE'])
+@auth_required()
+def delete_user_issue(issue_id):
+    # Check if user owns this issue
+    conn = get_db()
+    issue = conn.execute('SELECT * FROM issues WHERE id=?', (issue_id,)).fetchone()
+    if not issue:
+        return jsonify({'success': False, 'message': 'Issue not found'}), 404
+    
+    if issue['user_email'] != request.user['email']:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    
+    # Only allow deletion if issue is still pending
+    if issue['status'] != 'pending':
+        return jsonify({'success': False, 'message': 'Cannot delete issue that is already assigned or resolved'}), 400
+    
+    conn.execute('DELETE FROM issues WHERE id=?', (issue_id,))
+    conn.commit()
+    
+    return jsonify({'success': True, 'message': 'Issue deleted successfully'})
 
 # --------------------------
 # Admin-protected endpoints
@@ -525,6 +678,72 @@ def feedback_pending_for_user(email):
     return jsonify({'success': True, 'issues': issues})
 
 
+@app.route('/api/feedback/submit', methods=['POST'])
+def submit_feedback():
+    data = request.get_json(silent=True) or {}
+    issue_id = data.get('issue_id')
+    user_email = data.get('user_email')
+    rating = data.get('rating')
+    comment = data.get('comment', '')
+
+    if not issue_id or not user_email or rating is None:
+        return jsonify({'success': False, 'message': 'Missing fields'}), 400
+
+    try:
+        rating = int(rating)
+        if rating < 1 or rating > 5:
+            raise ValueError()
+    except Exception:
+        return jsonify({'success': False, 'message': 'Invalid rating'}), 400
+
+    conn = get_db()
+    issue = conn.execute('SELECT * FROM issues WHERE id=?', (issue_id,)).fetchone()
+    if not issue:
+        return jsonify({'success': False, 'message': 'Issue not found'}), 404
+
+    # Only allow feedback for resolved issues (best-effort)
+    if (issue['status'] or '').lower() != 'resolved':
+        return jsonify({'success': False, 'message': 'Feedback only allowed for resolved issues'}), 400
+
+    # Insert feedback
+    conn.execute('INSERT INTO feedback (issue_id, user_email, rating, comment) VALUES (?, ?, ?, ?)',
+                 (issue_id, user_email, rating, comment))
+    conn.commit()
+
+    return jsonify({'success': True, 'message': 'Feedback submitted'})
+
+
+@app.route('/api/admin/feedback-report', methods=['GET'])
+@auth_required(role='admin')
+def admin_feedback_report():
+    conn = get_db()
+    # Detailed feedback list with technician info if available
+    rows = conn.execute('''
+        SELECT f.id, f.issue_id, f.user_email, f.rating, f.comment, f.created_at,
+               i.assigned_to as technician_id, t.name as technician_name
+        FROM feedback f
+        LEFT JOIN issues i ON f.issue_id = i.id
+        LEFT JOIN technicians t ON i.assigned_to = t.id
+        ORDER BY f.created_at DESC
+    ''').fetchall()
+    feedback_list = [dict(r) for r in rows]
+
+    # Aggregated stats per technician
+    stats = conn.execute('''
+        SELECT t.id as technician_id, t.name as technician_name,
+               COUNT(f.id) as feedback_count,
+               ROUND(AVG(f.rating),2) as avg_rating
+        FROM feedback f
+        LEFT JOIN issues i ON f.issue_id = i.id
+        LEFT JOIN technicians t ON i.assigned_to = t.id
+        GROUP BY t.id
+        ORDER BY avg_rating DESC
+    ''').fetchall()
+    stats_list = [dict(r) for r in stats]
+
+    return jsonify({'success': True, 'feedback': feedback_list, 'stats': stats_list})
+
+
 @app.route('/api/technician/tasks', methods=['GET'])
 @auth_required(role='technician')
 def technician_tasks():
@@ -581,6 +800,148 @@ def mark_notification_read(notif_id):
         return jsonify({'success': False, 'message': str(e)}), 400
 
 # --------------------------
+# Analytics & Reporting
+# --------------------------
+@app.route('/api/analytics/summary', methods=['GET'])
+@auth_required(role='admin')
+def analytics_summary():
+    """Get overall system summary statistics"""
+    conn = get_db()
+    
+    # Count records
+    total_issues = conn.execute('SELECT COUNT(*) as cnt FROM issues').fetchone()['cnt']
+    resolved_issues = conn.execute('SELECT COUNT(*) as cnt FROM issues WHERE status=?', ('resolved',)).fetchone()['cnt']
+    pending_issues = conn.execute('SELECT COUNT(*) as cnt FROM issues WHERE status IN (?, ?)', ('pending', 'assigned')).fetchone()['cnt']
+    total_teachers = conn.execute('SELECT COUNT(*) as cnt FROM teachers WHERE status=?', ('active',)).fetchone()['cnt']
+    total_students = conn.execute('SELECT COUNT(*) as cnt FROM students').fetchone()['cnt']
+    total_technicians = conn.execute('SELECT COUNT(*) as cnt FROM technicians').fetchone()['cnt']
+    
+    # Average resolution time in days
+    resolutions = conn.execute('''
+        SELECT AVG((julianday(resolved_at) - julianday(created_at))) as avg_days 
+        FROM issues WHERE status=? AND resolved_at IS NOT NULL
+    ''', ('resolved',)).fetchone()['avg_days']
+    avg_resolution_time = round(resolutions, 2) if resolutions else 0
+    
+    return jsonify({
+        'success': True,
+        'total_issues': total_issues,
+        'resolved_issues': resolved_issues,
+        'pending_issues': pending_issues,
+        'resolution_rate': round((resolved_issues / total_issues * 100), 2) if total_issues > 0 else 0,
+        'avg_resolution_time_days': avg_resolution_time,
+        'total_teachers': total_teachers,
+        'total_students': total_students,
+        'total_technicians': total_technicians
+    })
+
+@app.route('/api/analytics/issues-by-type', methods=['GET'])
+@auth_required(role='admin')
+def analytics_issues_by_type():
+    """Get issue count breakdown by type"""
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT issue_type, COUNT(*) as count, 
+               SUM(CASE WHEN status=? THEN 1 ELSE 0 END) as resolved
+        FROM issues GROUP BY issue_type ORDER BY count DESC
+    ''', ('resolved',)).fetchall()
+    
+    data = [{'type': row['issue_type'], 'count': row['count'], 'resolved': row['resolved']} for row in rows]
+    return jsonify({'success': True, 'data': data})
+
+@app.route('/api/analytics/issues-by-status', methods=['GET'])
+@auth_required(role='admin')
+def analytics_issues_by_status():
+    """Get issue count breakdown by status"""
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT status, COUNT(*) as count FROM issues GROUP BY status
+    ''').fetchall()
+    
+    data = {row['status']: row['count'] for row in rows}
+    return jsonify({'success': True, 'data': data})
+
+@app.route('/api/analytics/technician-performance', methods=['GET'])
+@auth_required(role='admin')
+def analytics_technician_performance():
+    """Get technician performance metrics"""
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT 
+            t.id, t.name, t.specialization,
+            COUNT(i.id) as total_assigned,
+            SUM(CASE WHEN i.status=? THEN 1 ELSE 0 END) as completed,
+            ROUND(AVG(f.rating), 2) as avg_rating
+        FROM technicians t
+        LEFT JOIN issues i ON t.id = i.assigned_to
+        LEFT JOIN feedback f ON i.id = f.issue_id
+        GROUP BY t.id ORDER BY completed DESC
+    ''', ('resolved',)).fetchall()
+    
+    data = [{
+        'technician_id': row['id'],
+        'name': row['name'],
+        'specialization': row['specialization'],
+        'total_assigned': row['total_assigned'] or 0,
+        'completed': row['completed'] or 0,
+        'avg_rating': row['avg_rating'] or 0
+    } for row in rows]
+    return jsonify({'success': True, 'data': data})
+
+@app.route('/api/analytics/issues-trend', methods=['GET'])
+@auth_required(role='admin')
+def analytics_issues_trend():
+    """Get issues trend over time (last 30 days)"""
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT 
+            DATE(created_at) as date, 
+            COUNT(*) as count
+        FROM issues 
+        WHERE created_at >= datetime('now', '-30 days')
+        GROUP BY DATE(created_at)
+        ORDER BY date ASC
+    ''').fetchall()
+    
+    data = [{'date': row['date'], 'count': row['count']} for row in rows]
+    return jsonify({'success': True, 'data': data})
+
+@app.route('/api/analytics/resolution-time-by-type', methods=['GET'])
+@auth_required(role='admin')
+def analytics_resolution_time_by_type():
+    """Get average resolution time by issue type"""
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT 
+            issue_type,
+            ROUND(AVG((julianday(resolved_at) - julianday(created_at))), 2) as avg_days
+        FROM issues 
+        WHERE status=? AND resolved_at IS NOT NULL
+        GROUP BY issue_type
+        ORDER BY avg_days DESC
+    ''', ('resolved',)).fetchall()
+    
+    data = [{'type': row['issue_type'], 'avg_resolution_days': row['avg_days']} for row in rows]
+    return jsonify({'success': True, 'data': data})
+
+@app.route('/api/analytics/user-distribution', methods=['GET'])
+@auth_required(role='admin')
+def analytics_user_distribution():
+    """Get user distribution by type"""
+    conn = get_db()
+    
+    teacher_count = conn.execute('SELECT COUNT(*) as cnt FROM teachers WHERE status=?', ('active',)).fetchone()['cnt']
+    student_count = conn.execute('SELECT COUNT(*) as cnt FROM students').fetchone()['cnt']
+    technician_count = conn.execute('SELECT COUNT(*) as cnt FROM technicians').fetchone()['cnt']
+    
+    data = {
+        'teachers': teacher_count,
+        'students': student_count,
+        'technicians': technician_count
+    }
+    return jsonify({'success': True, 'data': data})
+
+# --------------------------
 # Health check
 # --------------------------
 @app.route('/api/health', methods=['GET'])
@@ -614,8 +975,6 @@ if __name__ == '__main__':
     print("Serving frontend from:", FRONTEND_DIR)
     print("Server listening on http://127.0.0.1:5000")
     print("="*60)
-    # For local dev keep debug=True; change host to '0.0.0.0' if you need external access
-    app.run(debug=True, host='127.0.0.1', port=5000)
 
 
 @app.route('/api/issue/update-status/<int:issue_id>', methods=['POST'])
@@ -656,3 +1015,50 @@ def update_issue_status(issue_id):
             create_notification(tech_email, 'technician', title, message)
 
     return jsonify({'success': True, 'message': 'Status updated'})
+
+
+# Delete teacher endpoint
+@app.route('/api/admin/teacher/<int:teacher_id>', methods=['DELETE'])
+@auth_required(role='admin')
+def delete_teacher(teacher_id):
+    try:
+        conn = get_db()
+        
+        # Check if teacher exists
+        teacher = conn.execute('SELECT * FROM teachers WHERE id=?', (teacher_id,)).fetchone()
+        if not teacher:
+            return jsonify({'success': False, 'message': 'Teacher not found'}), 404
+        
+        # Delete teacher from database
+        conn.execute('DELETE FROM teachers WHERE id=?', (teacher_id,))
+        conn.commit()
+        
+        return jsonify({'success': True, 'message': 'Teacher deleted successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# Delete student endpoint
+@app.route('/api/admin/student/<int:student_id>', methods=['DELETE'])
+@auth_required(role='admin')
+def delete_student(student_id):
+    try:
+        conn = get_db()
+        
+        # Check if student exists
+        student = conn.execute('SELECT * FROM students WHERE id=?', (student_id,)).fetchone()
+        if not student:
+            return jsonify({'success': False, 'message': 'Student not found'}), 404
+        
+        # Delete student from database
+        conn.execute('DELETE FROM students WHERE id=?', (student_id,))
+        conn.commit()
+        
+        return jsonify({'success': True, 'message': 'Student deleted successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# For local dev keep debug=True; change host to '0.0.0.0' if you need external access
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)

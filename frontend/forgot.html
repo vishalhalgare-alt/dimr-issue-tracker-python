@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forgot Password - College Technical Issue Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Forgot Password Page -->
+    <div class="container">
+        <div class="forgot-box">
+            <button class="back-btn" onclick="window.location.href='login.html'">
+                <i class="fas fa-arrow-left"></i> Back to Login
+            </button>
+
+            <div class="forgot-header">
+                <i class="fas fa-key"></i>
+                <h2>Reset Password</h2>
+                <p>Enter your email to receive OTP</p>
+            </div>
+
+            <!-- Step 1: Enter Email -->
+            <form id="forgotEmailForm" onsubmit="sendOTP(event); return false;" style="display: block;">
+                <div class="form-group">
+                    <label><i class="fas fa-envelope"></i> Email Address</label>
+                    <input type="email" id="forgotEmail" required placeholder="Enter your registered email">
+                </div>
+
+                <div id="forgotError" class="error-message"></div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i> Send OTP
+                </button>
+            </form>
+
+            <!-- Step 2: Verify OTP -->
+            <form id="verifyOTPForm" onsubmit="verifyOTP(event); return false;" style="display: none;">
+                <div class="otp-sent-message">
+                    <i class="fas fa-check-circle"></i>
+                    <p>OTP sent to <strong id="sentEmail"></strong></p>
+                    <p class="otp-display">Your OTP: <strong id="displayOTP"></strong></p>
+                    <p class="otp-note">(In production, OTP will be sent via email/SMS)</p>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-shield-alt"></i> Enter OTP</label>
+                    <input type="text" id="otpInput" required placeholder="Enter 6-digit OTP" maxlength="6" pattern="[0-9]{6}">
+                </div>
+
+                <div id="otpError" class="error-message"></div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check"></i> Verify OTP
+                </button>
+
+                <button type="button" class="btn btn-secondary" onclick="resendOTP()" style="margin-top: 10px;">
+                    <i class="fas fa-redo"></i> Resend OTP
+                </button>
+            </form>
+
+            <!-- Step 3: Reset Password -->
+            <form id="resetPasswordForm" onsubmit="resetPassword(event); return false;" style="display: none;">
+                <div class="success-message show">
+                    <i class="fas fa-check-circle"></i> OTP Verified Successfully!
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> New Password</label>
+                    <input type="password" id="newPassword" required placeholder="Enter new password" minlength="6">
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> Confirm Password</label>
+                    <input type="password" id="confirmPassword" required placeholder="Confirm new password" minlength="6">
+                </div>
+
+                <div id="resetError" class="error-message"></div>
+                <div id="resetSuccess" class="success-message"></div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Reset Password
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

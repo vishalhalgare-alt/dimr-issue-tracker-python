@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - College Technical Issue Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Dashboard (Teacher/Student) -->
+    <div class="page active">
+        <nav class="dashboard-nav">
+            <div class="nav-brand">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Technical Institute</span>
+            </div>
+            <div class="nav-user">
+                <span id="userName"></span>
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </nav>
+        
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-profile">
+                <div class="profile-avatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h3 id="sidebarName"></h3>
+                <p id="sidebarEmail"></p>
+                <p id="sidebarInfo"></p>
+            </div>
+            
+            <div class="sidebar-menu">
+                <a href="#" onclick="showDashboardSection('overview')">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="#" onclick="showDashboardSection('report')">
+                    <i class="fas fa-plus-circle"></i> Report Issue
+                </a>
+                <a href="#" onclick="showDashboardSection('issues')">
+                    <i class="fas fa-list"></i> My Issues
+                </a>
+                <a href="#" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+        
+        <div class="dashboard-content">
+            <!-- Overview Section -->
+            <div id="overviewSection" class="dashboard-section active">
+                <h1><i class="fas fa-chart-bar"></i> Dashboard Overview</h1>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <i class="fas fa-check-circle"></i>
+                        <h3 id="resolvedCount">0</h3>
+                        <p>Resolved Issues</p>
+                    </div>
+                    <div class="stat-card pending">
+                        <i class="fas fa-clock"></i>
+                        <h3 id="pendingCount">0</h3>
+                        <p>Pending Issues</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-file-alt"></i>
+                        <h3 id="totalCount">0</h3>
+                        <p>Total Issues</p>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-star"></i>
+                        <h3 id="feedbackCount">0</h3>
+                        <p>Pending Feedback</p>
+                    </div>
+                </div>
+                <div id="pendingFeedback" style="margin-top: 2rem;"></div>
+            </div>
+            
+            <!-- Report Issue Section -->
+            <div id="reportSection" class="dashboard-section">
+                <h1><i class="fas fa-bug"></i> Report Technical Issue</h1>
+                <form id="issueForm" onsubmit="submitIssue(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-heading"></i> Issue Title</label>
+                            <input type="text" id="issueTitle" required placeholder="Brief title of the issue">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><i class="fas fa-list"></i> Category</label>
+                            <select id="issueCategory" required>
+                                <option value="">Select Category</option>
+                                <option value="Hardware">Hardware</option>
+                                <option value="Software">Software</option>
+                                <option value="Network">Network</option>
+                                <option value="Internet">Internet</option>
+                                <option value="Classroom Equipment">Classroom Equipment</option>
+                                <option value="Printer">Printer</option>
+                                <option value="Lab Equipment">Lab Equipment</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-align-left"></i> Description</label>
+                        <textarea id="issueDescription" required placeholder="Describe the issue in detail" rows="5"></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-map-marker-alt"></i> Location</label>
+                            <select id="issueLocation" required>
+                                <option value="">Select Location</option>
+                                <option value="Lab A">Lab A</option>
+                                <option value="Lab B">Lab B</option>
+                                <option value="Classroom 1">Classroom 1</option>
+                                <option value="Classroom 2">Classroom 2</option>
+                                <option value="Library">Library</option>
+                                <option value="Office">Office</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label><i class="fas fa-camera"></i> Upload Photo (Optional)</label>
+                            <input type="file" id="issuePhoto" accept="image/*">
+                        </div>
+                    </div>
+                    
+                    <div id="photoPreview" style="display: none; margin: 1rem 0;">
+                        <img id="previewImg" src="" alt="Preview" style="max-width: 200px; border-radius: 8px;">
+                    </div>
+                    
+                    <div id="submitError" class="error-message"></div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Submit Issue
+                    </button>
+                </form>
+            </div>
+            
+            <!-- My Issues Section -->
+            <div id="issuesSection" class="dashboard-section">
+                <h1><i class="fas fa-list"></i> My Reported Issues</h1>
+                <div id="issuesList" class="issues-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const storedUser = localStorage.getItem('currentUser');
+            const storedType = localStorage.getItem('currentUserType');
+            const storedToken = localStorage.getItem('currentToken');
+            
+            if (!storedUser || !storedType || !storedToken) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            currentUser = JSON.parse(storedUser);
+            currentUserType = storedType;
+            currentToken = storedToken;
+            
+            updateUserDashboard();
+            loadUserIssues();
+            loadPendingFeedback();
+        });
+
+        function showDashboardSection(section) {
+            document.querySelectorAll('.dashboard-section').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.getElementById(section + 'Section').classList.add('active');
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
+        }
+    </script>
+</body>
+</html>

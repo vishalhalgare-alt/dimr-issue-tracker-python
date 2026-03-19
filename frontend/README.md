@@ -102,6 +102,10 @@ python -m http.server 8000
 - **Email:** `admin@college.edu`
 - **Password:** `admin123`
 
+### **Technician Login**
+- **Email:** `admin@gmail.com`
+- **Password:** `admin123`
+
 ### **Teacher/Student**
 - Register new accounts through the application
 - Teachers need admin approval before login
@@ -112,22 +116,44 @@ python -m http.server 8000
 ## 📋 Features
 
 ### ✅ **Admin Panel**
-- View and approve/reject teacher registration requests
-- View all registered teachers
-- View all registered students
-- Monitor all reported technical issues
-- Real-time dashboard updates
+- **Pending Approvals** - View and approve/reject teacher registration requests
+- **Teachers Management** - View all teachers with delete functionality
+- **Students Management** - View all students with delete functionality
+- **Technicians Management** - View all technicians
+- **All Issues** - Monitor all reported issues with status tracking and Done badges
+- **Issue Assignment** - Assign unresolved issues to technicians with notifications
+- **Feedback Reports** - View technician ratings, feedback summaries, and detailed feedback entries
+- **Analytics Dashboard** - 
+  - Issue summary (total, pending, resolved)
+  - Issues by type (pie chart)
+  - Issues by status (doughnut chart)
+  - Technician performance metrics
+  - Issues trend over time (line chart)
+  - Resolution time by issue type
+  - User distribution analysis
+  - Technician progress chart with completion percentages
+  - Export to PDF and Excel
+
+### ✅ **Technician Portal**
+- **My Tasks Dashboard** - View all assigned issues with status
+- **Task Filters** - Filter tasks (All, Assigned, Completed)
+- **Mark Resolved** - Mark issues as resolved with automatic feedback prompt to users
+- **Notifications** - Real-time notifications for new task assignments
+- **Performance Metrics** - View total tasks, pending tasks, completed tasks, and average rating
+- **Feedback Reception** - Receive ratings (1-5 stars) and comments from users after issue resolution
 
 ### ✅ **Teacher Portal**
 - Self-registration with admin approval workflow
 - Login with email and password
-- Report technical issues with details:
+- **Report Technical Issues** with details:
   - Issue type (Computer/WiFi/Digital Board/Other)
   - Floor number (1-5)
   - Class/Room number
   - Detailed description
 - Track all reported issues and their status
-- Forgot password functionality
+- **Feedback System** - Rate resolved issues (1-5 stars) and provide comments
+- **Forgot Password** - Reset password with OTP verification
+- Real-time dashboard with issue statistics
 
 ### ✅ **Student Portal**
 - Self-registration (instant activation)
@@ -135,7 +161,9 @@ python -m http.server 8000
 - Division selection (A/B/C)
 - Report technical issues
 - Track issue resolution status
-- User-friendly dashboard
+- **Feedback System** - Rate technicians and provide comments
+- **Forgot Password** - Secure password reset with OTP
+- User-friendly dashboard with issue tracking
 
 ---
 
@@ -159,14 +187,184 @@ python -m http.server 8000
 
 ## 🗄️ Database Schema
 
+### **Complete ER Diagram**
+
+```
+╔════════════════════════════════════════════════════════════════════════════════════╗
+║                    COLLEGE TECHNICAL ISSUE TRACKER - ER DIAGRAM                    ║
+╚════════════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                      DATABASE ENTITIES & RELATIONSHIPS                                       │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+                           ┏━━━━━━━━━━━━━━━━━━━━┓
+                           ┃      ADMIN         ┃
+                           ┣━━━━━━━━━━━━━━━━━━━━┫
+                           ┃ ★ id (PK)          ┃
+                           ┃   email (UNIQUE)   ┃
+                           ┃   password         ┃
+                           ┃   name             ┃
+                           ┃   created_at       ┃
+                           ┗━━━━━━━━━━━━━━━━━━━━┛
+                                    │
+                                    │ manages everything
+                                    │
+                    ┌───────────────┼───────────────┐
+                    │               │               │
+                    │               │               │
+        ┌───────────▼──────────┐    │    ┌──────────▼─────────┐
+        ┃    TEACHERS          ┃    │    ┃  TECHNICIANS       ┃
+        ┣──────────────────────┫    │    ┣────────────────────┫
+        ┃ ★ id (PK)            ┃    │    ┃ ★ id (PK)          ┃
+        ┃   name               ┃    │    ┃   name             ┃
+        ┃   email (UNIQUE)     ┃    │    ┃   email (UNIQUE)   ┃
+        ┃   password (hashed)  ┃    │    ┃   password (hash)  ┃
+        ┃   phone              ┃    │    ┃   phone            ┃
+        ┃   status             ┃    │    ┃   specialization   ┃
+        ┃   (pending/approved) ┃    │    ┃   created_at       ┃
+        ┃   created_at         ┃    │    ┗────────────────────┛
+        ┗───────┬──────────────┘    │           ▲
+                │                   │           │
+                │                   │    assigned_to
+                │                   │           │
+                │        ┌──────────▼───────────┤
+                │        │                      │
+                │   ┌────▼──────────────────┐   │
+                │   ┃      ISSUES           ┃   │
+                │   ┣───────────────────────┫   │
+                │   ┃ ★ id (PK)             ┃   │
+                │   ┃   user_email          ┃───┼──> reports issue
+                │   ┃   user_type           ┃   │
+                │   ┃   (teacher/student)   ┃   │
+                │   ┃   issue_type          ┃   │
+                │   ┃   floor               ┃   │
+                │   ┃   class_number        ┃   │
+                │   ┃   description         ┃   │
+                │   ┃   status              ┃   │
+                │   ┃   (pending/assigned   ┃   │
+                │   ┃    /resolved)         ┃   │
+                │   ┃   assigned_to (FK)◄───┘   │
+                │   ┃   resolved_at         ┃   │
+                │   ┃   created_at          ┃   │
+                │   ┗───────┬────────────────┘   │
+                │           │                    │
+                │           │ has feedback       │
+                │           │                    │
+                │       ┌───▼────────────────┐   │
+                │       ┃    FEEDBACK        ┃   │
+                │       ┣────────────────────┫   │
+                │       ┃ ★ id (PK)          ┃   │
+                │       ┃   issue_id (FK)◄───┤   │
+                │       ┃   user_email       ┃   │
+                │       ┃   rating (1-5)     ┃   │
+                │       ┃   comment          ┃   │
+                │       ┃   created_at       ┃   │
+                │       ┗────────────────────┘   │
+                │                                │
+        ┌───────▼──────────┐                     │
+        ┃    STUDENTS      ┃                     │
+        ┣──────────────────┫                     │
+        ┃ ★ id (PK)        ┃                     │
+        ┃   name           ┃─────────────────────┘
+        ┃   email(UNIQUE)  ┃   reports issue
+        ┃   password(hash) ┃
+        ┃   phone          ┃
+        ┃   course         ┃
+        ┃   (MCA/MBA)      ┃
+        ┃   division       ┃
+        ┃   (A/B/C)        ┃
+        ┃   created_at     ┃
+        ┗──────────────────┘
+
+
+                    ┌────────────────────────────────────┐
+                    │   NOTIFICATIONS (Central Hub)      │
+                    ├────────────────────────────────────┤
+                    │ ★ id (PK)                          │
+                    │   user_email (linked to any user)  │
+                    │   user_type (admin/teacher/        │
+                    │              student/technician)   │
+                    │   title                            │
+                    │   message                          │
+                    │   is_read (0/1)                    │
+                    │   created_at                       │
+                    └────────────────────────────────────┘
+                              ▲
+                    ┌─────────┼─────────┐
+                    │         │         │
+                    │         │         │
+            notifies   notifies  notifies
+            teacher    student  technician
+                    │         │         │
+
+
+╔════════════════════════════════════════════════════════════════════════════════════╗
+║                              RELATIONSHIPS SUMMARY                                 ║
+╠════════════════════════════════════════════════════════════════════════════════════╣
+║ 1. ADMIN → ALL ENTITIES                                                            ║
+║    • Creates/approves/rejects Teachers                                             ║
+║    • Manages all Students                                                          ║
+║    • Manages all Technicians                                                       ║
+║    • Assigns Issues to Technicians                                                 ║
+║    • Views/manages Feedback                                                        ║
+║                                                                                    ║
+║ 2. TEACHERS ↔ ISSUES                                                               ║
+║    • Teachers report Issues                                                        ║
+║    • status: pending/approved (by Admin)                                           ║
+║    • Receive Notifications when issue assigned/resolved                            ║
+║    • Can provide Feedback (rating/comment)                                         ║
+║                                                                                    ║
+║ 3. STUDENTS ↔ ISSUES                                                               ║
+║    • Students report Issues                                                        ║
+║    • Auto-approved (instant activation)                                            ║
+║    • Receive Notifications when issue assigned/resolved                            ║
+║    • Can provide Feedback (rating/comment)                                         ║
+║                                                                                    ║
+║ 4. TECHNICIANS ↔ ISSUES                                                            ║
+║    • Assigned Issues by Admin                                                      ║
+║    • Can Mark Issues as Resolved                                                   ║
+║    • Receive Notifications for assignments                                         ║
+║    • Receive Ratings/Feedback from Users                                           ║
+║                                                                                    ║
+║ 5. ISSUES ↔ FEEDBACK                                                               ║
+║    • Each resolved Issue can have multiple Feedback entries                         ║
+║    • Feedback contains: rating (1-5), comment, timestamp                           ║
+║    • Admin views aggregated feedback per Technician                                ║
+║                                                                                    ║
+║ 6. ALL USERS ↔ NOTIFICATIONS                                                       ║
+║    • Notifications sent to: Admin, Teachers, Students, Technicians                 ║
+║    • Events: Issue reported, assigned, resolved, feedback received                 ║
+║    • Real-time updates with read/unread status                                     ║
+║                                                                                    ║
+╚════════════════════════════════════════════════════════════════════════════════════╝
+
+KEY:
+★ = Primary Key (PK)
+→ = Relationship/Reference
+(FK) = Foreign Key
+```
+
+### **Detailed Table Specifications**
+
+### **Admin Table** (NEW)
+```sql
+- id (Primary Key)
+- email (Unique)
+- password (Hashed with bcrypt)
+- name
+- created_at
+```
+
 ### **Teachers Table**
 ```sql
 - id (Primary Key)
 - name
 - phone
 - email (Unique)
-- password (Hashed)
-- status (pending/approved)
+- password (Hashed with bcrypt)
+- status (pending/approved) - Admin approval required
 - created_at
 ```
 
@@ -176,9 +374,20 @@ python -m http.server 8000
 - name
 - phone
 - email (Unique)
-- password (Hashed)
+- password (Hashed with bcrypt)
 - course (MCA/MBA)
 - division (A/B/C)
+- created_at
+```
+
+### **Technicians Table**
+```sql
+- id (Primary Key)
+- name
+- email (Unique)
+- password (Hashed with bcrypt)
+- phone
+- specialization
 - created_at
 ```
 
@@ -188,11 +397,34 @@ python -m http.server 8000
 - user_name
 - user_type (teacher/student)
 - user_email
-- issue_type
-- floor
+- issue_type (Computer/WiFi/Digital Board/Other)
+- floor (1-5)
 - class_number
 - description
-- status (pending/resolved)
+- status (pending/assigned/resolved)
+- assigned_to (Foreign Key → Technicians.id, nullable)
+- resolved_at (timestamp, nullable)
+- created_at
+```
+
+### **Notifications Table**
+```sql
+- id (Primary Key)
+- user_email
+- user_type (admin/teacher/student/technician)
+- title
+- message
+- is_read (0=unread, 1=read)
+- created_at
+```
+
+### **Feedback Table**
+```sql
+- id (Primary Key)
+- issue_id (Foreign Key → Issues.id)
+- user_email
+- rating (1-5 stars)
+- comment (optional)
 - created_at
 ```
 
@@ -270,29 +502,36 @@ This project is created for educational purposes.
 
 ## 🌟 Future Enhancements
 
-- [ ] Email notifications
-- [ ] Issue resolution workflow
-- [ ] File attachment support
+- [ ] Email notifications (actual email sending)
+- [ ] File attachment support for issues
 - [ ] Mobile app (React Native/Flutter)
-- [ ] Advanced reporting and analytics
-- [ ] Real-time notifications
-- [ ] Multi-language support
-- [ ] PDF report generation
-- [ ] Issue assignment to maintenance staff
+- [ ] WebSocket for real-time updates
+- [ ] Advanced reporting and analytics enhancements
 - [ ] SMS alerts
 - [ ] Dark mode theme
+- [ ] Issue priority levels
+- [ ] SLA tracking for issues
+- [ ] Department-wise issue categorization
+- [ ] API documentation (Swagger/OpenAPI)
+- [ ] Two-factor authentication
 
 ---
 
 ## 🎯 Project Highlights
 
-✅ **Professional Design** - Modern UI/UX with gradient effects
-✅ **Secure Authentication** - Password hashing and validation
-✅ **Role-Based Access** - Admin, Teacher, Student portals
-✅ **Complete CRUD** - Create, Read, Update, Delete operations
-✅ **Real Database** - SQLite with proper relationships
-✅ **Responsive** - Works on all devices
-✅ **Production Ready** - Error handling and validation
+✅ **Professional Design** - Modern UI/UX with gradient effects and responsive layouts
+✅ **Secure Authentication** - Password hashing, JWT tokens, and OTP-based password reset
+✅ **Role-Based Access** - Admin, Technician, Teacher, and Student portals
+✅ **Issue Management** - Complete CRUD with assignment workflow and status tracking
+✅ **Technician Portal** - Task management, notifications, and performance metrics
+✅ **Feedback System** - 1-5 star ratings and comments from users
+✅ **Analytics Dashboard** - 7+ charts with visualization, trend analysis, and exports
+✅ **Real Database** - SQLite with proper relationships and referential integrity
+✅ **Responsive Design** - Works on desktop, tablet, and mobile devices
+✅ **Admin Management** - Delete users, approve teachers, assign issues
+✅ **Notification System** - Real-time updates for task assignments and status changes
+✅ **Mobile Compatible** - Dynamic API URL detection for network access
+✅ **Production Ready** - Error handling, validation, and security best practices
 
 ---
 

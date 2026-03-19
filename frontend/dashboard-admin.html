@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - College Technical Issue Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- Admin Dashboard -->
+    <div class="page active">
+        <nav class="dashboard-nav admin-nav">
+            <div class="nav-brand">
+                <i class="fas fa-shield-alt"></i>
+                <span>Admin Panel</span>
+            </div>
+            <div class="nav-user">
+                <span>Administrator</span>
+                <button class="btn btn-logout" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </nav>
+        
+        <div class="admin-content">
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="showAdminTab('pending', this); return false;">
+                    <i class="fas fa-user-clock"></i> Pending Approvals
+                </button>
+                <button class="tab-btn" onclick="showAdminTab('teachers', this); return false;">
+                    <i class="fas fa-chalkboard-teacher"></i> Teachers
+                </button>
+                <button class="tab-btn" onclick="showAdminTab('students', this); return false;">
+                    <i class="fas fa-user-graduate"></i> Students
+                </button>
+                <button class="tab-btn" onclick="showAdminTab('technicians', this); return false;">
+                    <i class="fas fa-tools"></i> Technicians
+                </button>
+                <button class="tab-btn" onclick="showAdminTab('issues', this); return false;">
+                    <i class="fas fa-exclamation-triangle"></i> All Issues
+                </button>
+                <button class="tab-btn" onclick="showAdminTab('feedback', this); return false;">
+                    <i class="fas fa-star"></i> Feedback
+                </button>
+                <button class="tab-btn" onclick="showAdminTab('analytics', this); return false;">
+                    <i class="fas fa-chart-line"></i> Analytics
+                </button>
+            </div>
+            
+            <div id="pendingTab" class="admin-tab-content active"></div>
+            <div id="teachersTab" class="admin-tab-content"></div>
+            <div id="studentsTab" class="admin-tab-content"></div>
+            <div id="techniciansTab" class="admin-tab-content"></div>
+            <div id="issuesTab" class="admin-tab-content"></div>
+            <div id="feedbackTab" class="admin-tab-content"></div>
+            <div id="analyticsTab" class="admin-tab-content"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const storedUser = localStorage.getItem('currentUser');
+            const storedType = localStorage.getItem('currentUserType');
+            const storedToken = localStorage.getItem('currentToken');
+            
+            if (!storedUser || !storedType || !storedToken || storedType !== 'admin') {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            currentUser = { type: 'admin', email: JSON.parse(storedUser).email || 'admin@college.edu' };
+            currentUserType = storedType;
+            currentToken = storedToken;
+            
+            loadAdminData();
+        });
+    </script>
+</body>
+</html>
